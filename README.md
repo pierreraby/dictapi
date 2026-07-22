@@ -6,8 +6,7 @@ Push-to-talk speech-to-text on any Linux desktop.
 2. Press again → the daemon sends your audio to **OpenRouter** (Mistral Transcribe)
 3. The transcribed text is typed wherever your cursor is via **dotool**
 
----
-
+-
 ## Requirements
 
 | What | How |
