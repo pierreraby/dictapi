@@ -1,0 +1,48 @@
+# ─── Dictapi configuration ────────────────────────────────────────
+# Location: ~/.config/dictapi/config.toml
+
+[api]
+# OpenRouter API key — use env OPENROUTER_API_KEY or set it here
+# api_key = "sk-or-v1-..."
+
+# STT model (OpenRouter)
+model = "mistralai/voxtral-mini-transcribe"
+
+# Language hint (ISO 639-1)
+language = "fr"
+
+# Request timeout in seconds
+timeout = 30
+
+[audio]
+# Sample rate in Hz
+samplerate = 16000
+
+# Number of channels (1 = mono recommended for STT)
+channels = 1
+
+# Recording device index (uncomment to use a specific device, default = system default)
+# device = 0
+
+[dotool]
+# Path to dotool binary
+binary = "dotool"
+
+# Delay in ms between keystrokes (0 = instant)
+typedelay = 0
+
+# XKB keyboard layout for dotool (DOTOOL_XKB_LAYOUT env var).
+# Needed on Wayland where Xwayland layout may differ from GNOME's.
+# Leave commented to skip.
+xkb_layout = "fr"
+# xkb_variant = "latin9"
+
+[daemon]
+# Unix socket path for CLI ↔ daemon IPC
+socket_path = "~/.local/share/dictapi/dictapi.sock"
+
+[keys]
+provider = "evdev"
+key = "KEY_RIGHTALT"
+tap_window_ms = 400
+# device = "/dev/input/event4"

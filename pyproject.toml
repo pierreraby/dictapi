@@ -1,0 +1,25 @@
+[project]
+name = "dictapi"
+version = "0.1.0"
+description = "Dictation agent for Linux — push-to-talk, STT via OpenRouter, types with dotool"
+requires-python = ">=3.11"
+readme = "README.md"
+license = { text = "MIT" }
+
+dependencies = [
+  "sounddevice>=0.5.0",
+  "pystray>=0.19.0",
+  "Pillow>=10.0.0",
+  "requests>=2.31.0",
+  "numpy>=1.24.0",
+]
+
+[project.scripts]
+dictapi = "dictapi.__main__:cli"
+
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["dictapi", "dictapi.*"]
