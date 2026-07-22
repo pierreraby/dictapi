@@ -16,7 +16,7 @@ Push-to-talk speech-to-text on any Linux desktop.
 | PortAudio | `sudo apt install libportaudio2` |
 | dotool | [geb/dotool](https://git.sr.ht/~geb/dotool) — already installed at `/usr/local/bin/dotool` |
 | GNOME tray | Install the **AppIndicator and KStatusNotifierItem Support** GNOME Shell extension |
-
+quel
 **Optional**: an OpenRouter API key.
 
 ---
