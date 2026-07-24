@@ -18,11 +18,10 @@ In both cases, the daemon sends your audio to **OpenRouter** (Mistral Transcribe
 | Python | ≥ 3.11 |
 | `uv` | [astral-sh/uv](https://docs.astral.sh/uv/) |
 | PortAudio | `sudo apt install libportaudio2` |
-| dotool | [geb/dotool](https://git.sr.ht/~geb/dotool) — already installed at `/usr/local/bin/dotool` |
+| dotool | [geb/dotool](https://git.sr.ht/~geb/dotool) — installed at `/usr/local/bin/dotool` |
 | evdev | `sudo apt install python3-evdev` (for double-tap) |
-| GNOME tray | Install the **AppIndicator and KStatusNotifierItem Support** GNOME Shell extension |
-
-**Optional:** an OpenRouter API key.
+| secret-tool | `sudo apt install libsecret-tools` (for secure API key storage) |
+| GNOME tray | Install the **AppIndicator and KStatusNotifierItem Support** extension |
 
 ---
 
@@ -33,14 +32,18 @@ cd dictapi
 uv sync
 ```
 
-Set your API key (pick one):
+### Store your OpenRouter API key securely
 
 ```bash
-# environment variable
-export OPENROUTER_API_KEY="sk-or-v1-..."
+secret-tool store --label="OpenRouter API Key" key OpenrouterApiKey
+```
 
-# or in ~/.config/dictapi/config.toml under [api]
-# api_key = "sk-or-v1-..."
+This stores the key in your GNOME Keyring — no plaintext in config files, no env vars to remember.
+
+All launcher scripts (`dictapi-start`, `dictapi-toggle`) load it automatically. If `secret-tool` is not found, you can fall back to:
+
+```bash
+export OPENROUTER_API_KEY="sk-or-v1-..."
 ```
 
 ---
@@ -54,7 +57,7 @@ mkdir -p ~/.config/dictapi
 cp config.toml ~/.config/dictapi/config.toml
 ```
 
-Readable settings:
+Full reference:
 
 ```toml
 [api]
@@ -87,14 +90,22 @@ tap_window_ms = 400      # max ms between two taps
 ### 1. Start the daemon
 
 ```bash
-dictapi daemon
+dictapi-start          # launches in foreground — leave the terminal open
 ```
 
-Leave this terminal open (or add it to your Startup Applications).
+Or add it to your GNOME Startup Applications for zero-friction launch on login.
 
 You should see a green microphone icon in the system tray.
 
-### 2. Dictate — choose your method
+### 2. Stop the daemon
+
+```bash
+dictapi-stop           # graceful shutdown via socket
+```
+
+Or right-click the tray icon → **Quitter**.
+
+### 3. Dictate — choose your method
 
 #### Option A — Double-tap (recommended)
 
@@ -108,24 +119,10 @@ Set up a GNOME custom shortcut:
 
 - **GNOME**: Settings → Keyboard → View & Customize Shortcuts → Custom Shortcuts → **+**
   - Name: `Dictée`
-  - Command: `dictapi toggle`
+  - Command: `dictapi-toggle`
   - Shortcut: e.g. **Ctrl+Shift+D**
 
-If using `uv`, a wrapper script is available at `~/.local/bin/dictapi-toggle`:
-
-```bash
-#!/bin/bash
-set -e
-exec /home/pierre/.local/bin/uv run \
-  --directory /home/pierre/Code/AI-test/pi-test/dictapi \
-  dictapi toggle
-```
-
-Point your GNOME shortcut to this script instead.
-
-### 3. Test manually
-
-In another terminal:
+### 4. Test manually
 
 ```bash
 dictapi status          # → OK idle
@@ -134,19 +131,19 @@ dictapi toggle          # → OK recording
 dictapi toggle          # → OK idle  (text is typed!)
 ```
 
-### 4. Debug — find key codes
+### 5. Debug — find key codes
 
 ```bash
 dictapi listen
 ```
 
-Press any key to see its `evdev` key code. Use this to find the right value for `[keys] key` in your config (e.g. `KEY_LEFTCTRL`, `KEY_RIGHTALT`). Press **Ctrl+C** to exit.
+Press any key to see its `evdev` key code. Use this to pick the right value for `[keys] key` in your config (e.g. `KEY_LEFTCTRL`, `KEY_RIGHTALT`). Press **Ctrl+C** to exit.
 
-### 5. Tray icon
+### 6. Tray icon
 
 Right-click the microphone icon for:
 
-- **Démarrer / Arrêter la dictée** — same as double-tap or keyboard shortcut
+- **Démarrer / Arrêter la dictée** — same as double-tap or toggle
 - **Quitter** — graceful shutdown
 
 Colours:
@@ -159,16 +156,30 @@ Colours:
 
 ---
 
+## Launcher scripts
+
+Three convenience scripts live in `~/.local/bin/`:
+
+| Script | Purpose |
+| --- | --- |
+| `dictapi-start` | Start the daemon (loads API key from GNOME Keyring) |
+| `dictapi-stop` | Graceful shutdown via Unix socket |
+| `dictapi-toggle` | Push-to-talk toggle — used by the GNOME shortcut |
+
+All three auto-load `OPENROUTER_API_KEY` from `secret-tool` if available.
+
+---
+
 ## Architecture
 
 ```
 GNOME shortcut  ─┐
-                  ├──▶ dictapi toggle ── Unix socket ──▶ dictapi daemon
-Double-tap Alt ───┘                                           │
-                                                  ┌──────────┼──────────┐
-                                                  ▼          ▼          ▼
-                                             Recorder   Transcriber   Typer
-                                           (sounddevice) (OpenRouter)  (dotool)
+                  ├──▶ dictapi-toggle ── Unix socket ──▶ dictapi daemon
+Double-tap Alt ───┘                                        │
+                                              ┌──────────┼──────────┐
+                                              ▼          ▼          ▼
+                                         Recorder   Transcriber   Typer
+                                       (sounddevice) (OpenRouter)  (dotool)
 
 State machine:  IDLE → RECORDING → TRANSCRIBING → TYPING → IDLE
 ```
@@ -192,10 +203,13 @@ One text command per TCP-style connection:
 
 | Symptom | Likely fix |
 | --- | --- |
-| `ModuleNotFoundError: sounddevice` | `uv sync` or `pip install sounddevice numpy` |
+| `ModuleNotFoundError: sounddevice` | `uv sync` |
 | `ModuleNotFoundError: evdev` | `sudo apt install python3-evdev` or `pip install evdev` |
+| `secret-tool: command not found` | `sudo apt install libsecret-tools` |
+| Key not found by secret-tool | Use the exact command: `secret-tool lookup key OpenrouterApiKey` |
 | `dotool not found` | `which dotool` — install from the source repo |
 | Tray icon doesn't appear | Install the GNOME AppIndicator extension |
-| `Missing OpenRouter API key` | `export OPENROUTER_API_KEY=sk-or-v1-...` |
-| `Connection refused` on `dictapi toggle` | Start `dictapi daemon` first |
-| Double-tap not working | Check `[keys] provider = "evdev"` in config; run `dictapi listen` to verify the key code |
+| `Missing OpenRouter API key` | Run `secret-tool store --label="OpenRouter API Key" key OpenrouterApiKey` |
+| `Connection refused` on `dictapi toggle` | Start the daemon with `dictapi-start` |
+| Double-tap not working | Check `[keys] provider = "evdev"` in config; run `dictapi listen` to verify key codes |
+| `dictapi-start` / `dictapi-toggle` not found | Make sure `~/.local/bin/` is in your `$PATH` |
