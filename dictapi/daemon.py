@@ -2,7 +2,8 @@
 
 Starts a background daemon that listens on a Unix socket for commands from
 ``dictapi toggle`` (the CLI front-end).  Orchestrates audio capture,
-OpenRouter transcription, and dotool typing.
+STT transcription (OpenRouter or Gladia, selected by config), and dotool
+typing.
 
 Usage:  dictapi daemon
 
@@ -23,7 +24,7 @@ from pathlib import Path
 
 from dictapi.config import load as load_config
 from dictapi.recorder import Recorder
-from dictapi.transcriber import Transcriber
+from dictapi.transcriber import make_transcriber
 from dictapi.typer import DotoolTyper
 
 try:
@@ -59,19 +60,10 @@ class Daemon:
             device=cfg["audio"].get("device"),
         )
 
-        # ---- API component ----
-        api_key = cfg["api"].get("api_key")
-        if not api_key:
-            raise RuntimeError(
-                "Missing OpenRouter API key. "
-                "Set OPENROUTER_API_KEY env var or api.api_key in config.toml"
-            )
-        self._transcriber = Transcriber(
-            api_key=api_key,
-            model=cfg["api"]["model"],
-            language=cfg["api"]["language"],
-            timeout=cfg["api"]["timeout"],
-        )
+        # ---- API component (OpenRouter or Gladia, via [api].provider) ----
+        # make_transcriber raises RuntimeError if the selected provider's
+        # API key is missing.
+        self._transcriber = make_transcriber(cfg)
 
         # ---- dotool component ----
         self._typer = DotoolTyper(

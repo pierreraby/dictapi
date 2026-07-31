@@ -60,7 +60,9 @@ def _cmd_listen(_args: argparse.Namespace) -> int:
     device = InputDevice(path)
     try:
         for event in device.read_loop():
-            if event.type == ecodes.EV_KEY and event.value == 1:
+            # evdev.ecodes is generated at runtime, so static type checkers
+            # cannot see EV_KEY — it exists (== 1) at runtime.
+            if event.type == ecodes.EV_KEY and event.value == 1:  # type: ignore[attr-defined]
                 kev = categorize(event)
                 assert isinstance(kev, KeyEvent)
                 print(f"  {kev.keycode}  (code={event.code})")
@@ -108,7 +110,7 @@ def cli() -> None:
     """Main CLI dispatch (entry point from pyproject.toml)."""
     parser = argparse.ArgumentParser(
         prog="dictapi",
-        description="Push-to-talk dictation for Linux — STT via OpenRouter + dotool.",
+        description="Push-to-talk dictation for Linux — STT via OpenRouter/Gladia + dotool.",
     )
     sub = parser.add_subparsers(dest="command", title="commands")
     sub.required = True

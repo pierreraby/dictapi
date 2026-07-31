@@ -2,22 +2,37 @@
 # Location: ~/.config/dictapi/config.toml
 
 [api]
-# OpenRouter API key — use env OPENROUTER_API_KEY or set it here
+# Transcription provider: "openrouter" (default) or "gladia".
+# provider = "openrouter"
+provider = "gladia"
+
+# ── OpenRouter ──────────────────────────────────────────────────
+# API key — use env OPENROUTER_API_KEY or set it here
 # api_key = "sk-or-v1-..."
 
 # STT model (OpenRouter). The value is a model slug; no code change is
 # needed to switch between compatible OpenRouter STT models.
-model = "mistralai/voxtral-mini-transcribe"
+# model = "mistralai/voxtral-mini-transcribe"
 # Other compatible models:
 # model = "x-ai/grok-stt-1.0"
-# model = "deepgram/nova-3"
+model = "deepgram/nova-3"
 # model = "microsoft/mai-transcribe-1.5"
 # model = "qwen/qwen3-asr-flash-2026-02-10"
 
-# Language hint (ISO 639-1)
+# ── Gladia ──────────────────────────────────────────────────────
+# Used only when provider = "gladia". Gladia's pre-recorded API is
+# asynchronous (upload → create job → poll); the daemon waits for the
+# result transparently.
+# API key — use env GLADIA_API_KEY (already loaded by dictapi-start).
+# gladia_api_key = "..."
+# Gladia model: "solaria-1" (generalist, default) or "solaria-3"
+# (latest, optimized for FR/EN/DE/ES/IT).
+gladia_model = "solaria-1"
+
+# Language hint (ISO 639-1) — used by both providers
 language = "fr"
 
-# Request timeout in seconds
+# Request timeout in seconds (also the max wait for a Gladia job)
 timeout = 30
 
 [audio]

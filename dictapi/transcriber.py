@@ -1,8 +1,14 @@
-"""OpenRouter speech-to-text API client.
+"""Speech-to-text clients and provider factory.
 
-The model is intentionally configurable: OpenRouter's STT endpoint accepts
-any compatible model slug, so switching providers does not require a new
-client implementation.
+Two providers are supported, both exposing the same one-shot
+``transcribe(wav_bytes) -> str`` interface:
+
+* **OpenRouter** (:class:`Transcriber`) — a single synchronous POST. The
+  model is configurable by slug; the endpoint accepts any compatible model.
+* **Gladia** (:class:`~dictapi.gladia.GladiaTranscriber`) — an asynchronous
+  pre-recorded job (upload → create → poll) hidden behind the same call.
+
+:func:`make_transcriber` selects the client from ``[api].provider``.
 """
 
 import base64
@@ -10,6 +16,8 @@ import logging
 from typing import Optional
 
 import requests
+
+from dictapi.gladia import GladiaTranscriber
 
 log = logging.getLogger(__name__)
 
@@ -83,3 +91,45 @@ class Transcriber:
         text = text.strip()
         log.info("Transcription (%d chars): %s", len(text), text[:100])
         return text
+
+
+def make_transcriber(cfg: dict) -> "Transcriber | GladiaTranscriber":
+    """Build the transcriber selected by ``[api].provider``.
+
+    ``provider = "gladia"`` returns a :class:`GladiaTranscriber`; anything
+    else (default ``"openrouter"``) returns the OpenRouter :class:`Transcriber`.
+    Both expose the same ``transcribe(wav_bytes) -> str`` interface, so the
+    daemon never needs to know which one is active.
+
+    Raises ``RuntimeError`` if the selected provider has no API key.
+    """
+    api = cfg["api"]
+    provider = (api.get("provider") or "openrouter").strip().lower()
+
+    if provider == "gladia":
+        api_key = api.get("gladia_api_key")
+        if not api_key:
+            raise RuntimeError(
+                "Missing Gladia API key. "
+                "Set GLADIA_API_KEY env var or api.gladia_api_key in config.toml"
+            )
+        return GladiaTranscriber(
+            api_key=api_key,
+            model=api.get("gladia_model") or "solaria-1",
+            language=api["language"],
+            timeout=api["timeout"],
+        )
+
+    # Default: OpenRouter
+    api_key = api.get("api_key")
+    if not api_key:
+        raise RuntimeError(
+            "Missing OpenRouter API key. "
+            "Set OPENROUTER_API_KEY env var or api.api_key in config.toml"
+        )
+    return Transcriber(
+        api_key=api_key,
+        model=api["model"],
+        language=api["language"],
+        timeout=api["timeout"],
+    )

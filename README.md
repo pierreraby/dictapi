@@ -7,7 +7,7 @@ Push-to-talk speech-to-text on any Linux desktop.
 1. **Double-tap** Right Alt → speak → double-tap Right Alt again (no GNOME shortcut needed)
 2. **Keyboard shortcut** (GNOME / custom) → `dictapi toggle` to start/stop
 
-In both cases, the daemon sends your audio to an **OpenRouter STT model** and the transcribed text is typed wherever your cursor is via **dotool**.
+In both cases, the daemon sends your audio to an **STT provider** — **OpenRouter** (default) or **Gladia** — and the transcribed text is typed wherever your cursor is via **dotool**.
 
 ---
 
@@ -61,7 +61,9 @@ Full reference:
 
 ```toml
 [api]
-model = "mistralai/voxtral-mini-transcribe"
+provider = "openrouter"  # "openrouter" | "gladia"
+model = "mistralai/voxtral-mini-transcribe"  # OpenRouter slug
+gladia_model = "solaria-1"                   # used when provider = "gladia"
 language = "fr"          # ISO 639‑1
 timeout = 30
 
@@ -82,6 +84,45 @@ provider = "evdev"       # enable double-tap, or "" to disable
 key = "KEY_RIGHTALT"     # key to double-tap
 tap_window_ms = 400      # max ms between two taps
 ```
+
+### Choisir le fournisseur : OpenRouter ou Gladia
+
+Le champ `[api].provider` sélectionne le moteur de transcription :
+
+- `provider = "openrouter"` (défaut) — utilise `OPENROUTER_API_KEY` et le
+  slug `[api].model`. Comportement historique, inchangé.
+- `provider = "gladia"` — utilise `GLADIA_API_KEY` et le modèle
+  `[api].gladia_model`.
+
+### Fournisseur Gladia
+
+[Gladia](https://www.gladia.io/) est utilisé **en direct** (pas via
+OpenRouter). Son API *pre-recorded* (v2) est **asynchrone** :
+upload → création d'un job → polling jusqu'à `status = "done"`. Le daemon
+gère ce cycle de façon transparente et attend le résultat (icône 🟠 orange
+pendant l'attente), exactement comme le flux batch/push-to-talk existant.
+
+```bash
+# Clé à exporter au démarrage (déjà chargé par dictapi-start si elle est
+# dans le trousseau) :
+export GLADIA_API_KEY="..."
+# ou, de façon sûre :
+secret-tool store --label="Gladia API Key" key GladiaApiKey
+```
+
+```toml
+[api]
+provider = "gladia"
+gladia_model = "solaria-1"   # ou "solaria-3" (optimisé FR/EN/DE/ES/IT)
+language = "fr"
+```
+
+Modèles Gladia : `solaria-1` (généraliste, défaut) et `solaria-3` (dernier
+modèle, une seule langue à la fois). Le WAV 16 kHz mono enregistré par
+dictapi est exactement le format cible de Gladia (aucune conversion).
+
+> ⚠️ Le polling est borné par `[api].timeout` (défaut 30 s). Le client CLI
+> attend 35 s. Pour de très longs enregistrements, augmente `timeout`.
 
 ### STT models OpenRouter
 
@@ -198,8 +239,8 @@ GNOME shortcut  ─┐
 Double-tap Alt ───┘                                        │
                                               ┌──────────┼──────────┐
                                               ▼          ▼          ▼
-                                         Recorder   Transcriber   Typer
-                                       (sounddevice) (OpenRouter STT) (dotool)
+                                         Recorder   Transcriber        Typer
+                                       (sounddevice) (OpenRouter/Gladia) (dotool)
 
 State machine:  IDLE → RECORDING → TRANSCRIBING → TYPING → IDLE
 ```
@@ -230,6 +271,8 @@ One text command per TCP-style connection:
 | `dotool not found` | `which dotool` — install from the source repo |
 | Tray icon doesn't appear | Install the GNOME AppIndicator extension |
 | `Missing OpenRouter API key` | Run `secret-tool store --label="OpenRouter API Key" key OpenrouterApiKey` |
+| `Missing Gladia API key` | Set `provider = "gladia"` needs `GLADIA_API_KEY` — run `secret-tool store --label="Gladia API Key" key GladiaApiKey` |
+| Gladia transcription slow / timeout | Gladia is async (polling); raise `[api].timeout` for long recordings |
 | `Connection refused` on `dictapi toggle` | Start the daemon with `dictapi-start` |
 | Double-tap not working | Check `[keys] provider = "evdev"` in config; run `dictapi listen` to verify key codes |
 | `dictapi-start` / `dictapi-toggle` not found | Make sure `~/.local/bin/` is in your `$PATH` |

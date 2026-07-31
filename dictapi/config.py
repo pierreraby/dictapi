@@ -8,10 +8,13 @@ import tomllib
 
 DEFAULT: dict[str, Any] = {
     "api": {
-        "model": "mistralai/voxtral-mini-transcribe",
+        "provider": "openrouter",  # "openrouter" | "gladia"
+        "model": "mistralai/voxtral-mini-transcribe",  # OpenRouter slug
+        "gladia_model": "solaria-1",  # Gladia pre-recorded model
         "language": "fr",
         "timeout": 30,
         "api_key": None,  # prefer env OPENROUTER_API_KEY
+        "gladia_api_key": None,  # prefer env GLADIA_API_KEY
     },
     "audio": {
         "samplerate": 16000,
@@ -53,7 +56,8 @@ def load(path: str | Path | None = None) -> dict[str, Any]:
       1. Hard-coded defaults
       2. ``~/.config/dictapi/config.toml`` (if exists)
       3. *path* argument (if given and exists)
-      4. Environment ``OPENROUTER_API_KEY`` (overrides api.api_key)
+      4. Environment ``OPENROUTER_API_KEY`` (overrides api.api_key) and
+         ``GLADIA_API_KEY`` (overrides api.gladia_api_key)
 
     Returns a flat-enough dict, nested under ``api`` / ``audio`` / etc.
     """
@@ -105,5 +109,9 @@ def load(path: str | Path | None = None) -> dict[str, Any]:
     env_key = os.environ.get("OPENROUTER_API_KEY")
     if env_key:
         cfg["api"]["api_key"] = env_key
+
+    gladia_key = os.environ.get("GLADIA_API_KEY")
+    if gladia_key:
+        cfg["api"]["gladia_api_key"] = gladia_key
 
     return cfg
