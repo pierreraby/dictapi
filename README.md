@@ -7,7 +7,7 @@ Push-to-talk speech-to-text on any Linux desktop.
 1. **Double-tap** Right Alt → speak → double-tap Right Alt again (no GNOME shortcut needed)
 2. **Keyboard shortcut** (GNOME / custom) → `dictapi toggle` to start/stop
 
-In both cases, the daemon sends your audio to **OpenRouter** (Mistral Transcribe) and the transcribed text is typed wherever your cursor is via **dotool**.
+In both cases, the daemon sends your audio to an **OpenRouter STT model** and the transcribed text is typed wherever your cursor is via **dotool**.
 
 ---
 
@@ -82,6 +82,26 @@ provider = "evdev"       # enable double-tap, or "" to disable
 key = "KEY_RIGHTALT"     # key to double-tap
 tap_window_ms = 400      # max ms between two taps
 ```
+
+### STT models OpenRouter
+
+Le modèle est choisi uniquement avec son *slug* dans `[api].model`. Le
+transcriber utilise l'endpoint OpenRouter commun
+[`/api/v1/audio/transcriptions`](https://openrouter.ai/docs/guides/overview/multimodal/stt),
+donc ces modèles ne demandent pas de modification du code :
+
+| Fournisseur | Slug OpenRouter |
+| --- | --- |
+| Mistral | `mistralai/voxtral-mini-transcribe` |
+| xAI | `x-ai/grok-stt-1.0` |
+| Deepgram | `deepgram/nova-3` |
+| Microsoft | `microsoft/mai-transcribe-1.5` |
+| Qwen | `qwen/qwen3-asr-flash-2026-02-10` |
+
+Pour changer de modèle, modifie la ligne `model`, puis redémarre le daemon.
+Le fonctionnement actuel est **batch / push-to-talk** : l'enregistrement WAV
+complet est envoyé après le second appui. Il ne s'agit pas d'un flux audio
+realtime (WebSocket ou transcription partielle pendant la capture).
 
 ---
 
@@ -172,14 +192,14 @@ All three auto-load `OPENROUTER_API_KEY` from `secret-tool` if available.
 
 ## Architecture
 
-```
+```text
 GNOME shortcut  ─┐
                   ├──▶ dictapi-toggle ── Unix socket ──▶ dictapi daemon
 Double-tap Alt ───┘                                        │
                                               ┌──────────┼──────────┐
                                               ▼          ▼          ▼
                                          Recorder   Transcriber   Typer
-                                       (sounddevice) (OpenRouter)  (dotool)
+                                       (sounddevice) (OpenRouter STT) (dotool)
 
 State machine:  IDLE → RECORDING → TRANSCRIBING → TYPING → IDLE
 ```

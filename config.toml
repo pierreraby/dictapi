@@ -5,8 +5,14 @@
 # OpenRouter API key — use env OPENROUTER_API_KEY or set it here
 # api_key = "sk-or-v1-..."
 
-# STT model (OpenRouter)
+# STT model (OpenRouter). The value is a model slug; no code change is
+# needed to switch between compatible OpenRouter STT models.
 model = "mistralai/voxtral-mini-transcribe"
+# Other compatible models:
+# model = "x-ai/grok-stt-1.0"
+# model = "deepgram/nova-3"
+# model = "microsoft/mai-transcribe-1.5"
+# model = "qwen/qwen3-asr-flash-2026-02-10"
 
 # Language hint (ISO 639-1)
 language = "fr"

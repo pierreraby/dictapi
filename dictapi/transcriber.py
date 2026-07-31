@@ -1,6 +1,8 @@
-"""OpenRouter transcription API client.
+"""OpenRouter speech-to-text API client.
 
-Mirrors the existing TS proxy (index.ts) behaviour.
+The model is intentionally configurable: OpenRouter's STT endpoint accepts
+any compatible model slug, so switching providers does not require a new
+client implementation.
 """
 
 import base64
@@ -15,7 +17,10 @@ API_URL = "https://openrouter.ai/api/v1/audio/transcriptions"
 
 
 class Transcriber:
-    """Send WAV audio to OpenRouter and return transcribed text."""
+    """Send a complete WAV recording to OpenRouter and return its text.
+
+    This is a one-shot transcription request, not a realtime audio stream.
+    """
 
     def __init__(
         self,
